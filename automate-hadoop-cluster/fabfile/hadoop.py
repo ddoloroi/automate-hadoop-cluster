@@ -5,21 +5,9 @@ from salt import salt_master, salt_minion
 from config_operations import *
 from hadoop_ops import hadoop
 
-config_path = '/Users/rakesh.varma/dev/automate-hadoop-cluster/config.ini'
+config_path = '../config.ini'
 c = ConfigOps(filepath = config_path)
-
 h = hadoop(namenode = c.hadoop_namenode, secondaryNamenode = c.hadoop_secondary_namenode, dataNodes = c.hadoop_slaves)
-@task
-def env(host_ip,host_user,keyfile):
-    """
-    fab hadoop.env:host_ip='*****',host_user='**',keyfile='******'
-    """
-    f = fabric_ops(host_ip = host_ip, host_user = host_user, host_key_file = keyfile)
-
-
-@task
-def test():
-    run('hostname')
 
 @task
 def salt_install():
@@ -34,7 +22,7 @@ def salt_install():
     master.ping()
 
 @task
-def access():
+def grant_access_hadoop_nodes():
     for node in c.all_hadoop_nodes:
         n = fabric_ops(host_ip = node, host_user = c.user, host_key_file = c.key_location)
         #Changing the host name of hadoop nodes to EC2 public dns name.
@@ -63,24 +51,28 @@ def install_java():
         sudo('salt "*" cmd.run "sudo apt-get update"')
         sudo('salt "*" cmd.run "sudo add-apt-repository ppa:webupd8team/java"')
         sudo('salt "*" cmd.run "echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections"')
-        sudo('salt "*" cmd.run "sudo apt-get update && sudo apt-get install -y oracle-java8-installer"')
+        sudo('salt "*" cmd.run "sudo apt-get update"')
+        sudo('salt "*" cmd.run "sudo apt-get install -y oracle-java8-installer"')
         sudo('salt "*" cmd.run "sudo apt-get -f -y -q install"')
+        cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export JAVA_HOME=/usr/lib/jvm/java-8-oracle")
+        sudo('salt "*" cmd.run "{0}"'.format(cmd))
 
 @task
 def install_hadoop_packages():
-    mirror_site = "http://mirror.nexcess.net/apache/hadoop/common/hadoop-2.7.1/hadoop-2.7.1.tar.gz"
     n = fabric_ops(host_ip = c.saltmaster, host_user = c.user, host_key_file = c.key_location)
+    mirror_site = "http://mirror.nexcess.net/apache/hadoop/common/hadoop-2.7.1/hadoop-2.7.1.tar.gz"
+    #Install hadoop binaries
     sudo('salt "*" cmd.run "wget {0} -P /home/ubuntu"'.format(mirror_site))
     sudo('salt "*" cmd.run "tar -xzvf /home/ubuntu/hadoop-2.7.1.tar.gz -C /home/ubuntu"')
     sudo('salt "*" cmd.run "mv /home/ubuntu/hadoop-2.7.1 /home/ubuntu/hadoop"')
     sudo('salt "*" cmd.run "rm -rf /home/ubuntu/hadoop-2.7.1.tar.gz"')
     #changing the hadoop directory owner to ubuntu.
     sudo('salt "*" cmd.run "sudo chown -R ubuntu /home/ubuntu/hadoop"')
+
+    #Sets environment variables and adds them to path.
     cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export HADOOP_CONF=/home/ubuntu/hadoop/etc/hadoop")
     sudo('salt "*" cmd.run "{0}"'.format(cmd))
     cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export HADOOP_PREFIX=/home/ubuntu/hadoop")
-    sudo('salt "*" cmd.run "{0}"'.format(cmd))
-    cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export JAVA_HOME=/usr/lib/jvm/java-8-oracle")
     sudo('salt "*" cmd.run "{0}"'.format(cmd))
     cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export PATH='$'PATH:'$'HADOOP_PREFIX/bin")
     sudo('salt "*" cmd.run "{0}"'.format(cmd))
@@ -120,7 +112,6 @@ def setup_hadoop_master_slave():
         n = fabric_ops(host_ip = slave, host_user = c.user, host_key_file = c.key_location)
         sudo("echo {0} > {1}".format(slave, h.config_slave_path))
 
-
 @task
 def start_services_hadoop_master():
     n = fabric_ops(host_ip = c.hadoop_namenode, host_user = c.user, host_key_file = c.key_location)
@@ -133,5 +124,16 @@ def run_pi_test():
     n = fabric_ops(host_ip = c.hadoop_namenode, host_user = c.user, host_key_file = c.key_location)
     with cd('/home/ubuntu/hadoop/share/hadoop/mapreduce'):
         run('/home/ubuntu/hadoop/bin/hadoop jar hadoop-mapreduce-examples-2.7.1.jar pi 10 1000000')
+
+
+@task
+def provision_hadoop_cluster():
+    execute(salt_install)
+    execute(grant_access_hadoop_nodes)
+    execute(install_java)
+    execute(install_hadoop_packages)
+    execute(deploy_hadoop_config)
+    execute(setup_hadoop_master_slave)
+    execute(start_services_hadoop_master)
 
 

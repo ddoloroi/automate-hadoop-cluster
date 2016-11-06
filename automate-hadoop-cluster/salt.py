@@ -17,11 +17,12 @@ class salt_master:
         return self.remote_command('python -c "{0};{1}"'.format("import salt.client","print salt.client.LocalClient().cmd('*','test.ping')"))
 
     def install(self):
-        sudo('add-apt-repository -y ppa:saltstack/salt')
-        sudo('apt-get update')
-        sudo('apt-get install -y salt-master')
-        sudo('service --status-all 2>&1 | grep salt')
-        sudo('salt-key -L')
+        with settings(warn_only = True):
+            sudo('add-apt-repository -y ppa:saltstack/salt')
+            sudo('apt-get update')
+            sudo('apt-get install -y salt-master')
+            sudo('service --status-all 2>&1 | grep salt')
+            sudo('salt-key -L')
 
     def keys_accept(self):
         sudo('salt-key -L')
@@ -39,14 +40,15 @@ class salt_minion:
         return str(output)
 
     def install(self, master, minion):
-        sudo('add-apt-repository -y ppa:saltstack/salt')
-        sudo('apt-get update')
-        sudo('apt-get install -y salt-minion')
-        cmd = 'echo "master: {0}" > /etc/salt/minion'.format(master)
-        sudo(cmd)
-        sudo('echo "id: {0}" >> /etc/salt/minion'.format(minion))
-        sudo('service --status-all 2>&1 | grep salt')
-        sudo('service salt-minion restart')
+        with settings(warn_only = True):
+            sudo('add-apt-repository -y ppa:saltstack/salt')
+            sudo('apt-get update')
+            sudo('apt-get install -y salt-minion')
+            cmd = 'echo "master: {0}" > /etc/salt/minion'.format(master)
+            sudo(cmd)
+            sudo('echo "id: {0}" >> /etc/salt/minion'.format(minion))
+            sudo('service --status-all 2>&1 | grep salt')
+            sudo('service salt-minion restart')
 
 
 

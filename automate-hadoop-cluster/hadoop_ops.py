@@ -76,3 +76,20 @@ class hadoop:
     @property
     def config_slave_path(self):
         return self.config_dir + '/slaves'
+
+    def install_hadoop_ubuntu(self):
+        mirror_site = "http://mirror.nexcess.net/apache/hadoop/common/hadoop-2.7.1/hadoop-2.7.1.tar.gz"
+        sudo('salt "*" cmd.run "wget {0} -P /home/ubuntu"'.format(mirror_site))
+        sudo('salt "*" cmd.run "tar -xzvf /home/ubuntu/hadoop-2.7.1.tar.gz -C /home/ubuntu"')
+        sudo('salt "*" cmd.run "mv /home/ubuntu/hadoop-2.7.1 /home/ubuntu/hadoop"')
+        sudo('salt "*" cmd.run "rm -rf /home/ubuntu/hadoop-2.7.1.tar.gz"')
+        #changing the hadoop directory owner to ubuntu.
+        sudo('salt "*" cmd.run "sudo chown -R ubuntu /home/ubuntu/hadoop"')
+
+    def create_path_ubuntu(self):
+        cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export HADOOP_CONF=/home/ubuntu/hadoop/etc/hadoop")
+        sudo('salt "*" cmd.run "{0}"'.format(cmd))
+        cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export HADOOP_PREFIX=/home/ubuntu/hadoop")
+        sudo('salt "*" cmd.run "{0}"'.format(cmd))
+        cmd = "echo '{0}' >> /home/ubuntu/.bashrc".format("export PATH='$'PATH:'$'HADOOP_PREFIX/bin")
+        sudo('salt "*" cmd.run "{0}"'.format(cmd))
