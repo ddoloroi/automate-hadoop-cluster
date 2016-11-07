@@ -1,0 +1,75 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample: Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for the instance to give you SSH access. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
+  "Parameters": {
+    "SSHLocation": {
+      "Description": "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    }
+  },
+  
+  "Resources": {
+    "EC2Instance1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t2.micro",
+        "SecurityGroups": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ],
+        "KeyName": "testkey",
+        "ImageId": "ami-a9d276c9",
+        "Tags" : [
+            {"Key" : "Name", "Value" : "namenode"},
+        ]
+      },
+     },
+    "EC2Instance2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": "t2.micro",
+        "SecurityGroups": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ],
+        "KeyName": "testkey",
+        "ImageId": "ami-a9d276c9",
+        "Tags" : [
+            {"Key" : "Name", "Value" : "secondarynamenode"},
+        ]
+      },
+     },
+      
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable SSH access via port 22",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": {
+              "Ref": "SSHLocation"
+            }
+          }
+        ]
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "c3482f43-7907-4e74-944b-6a4fa6f3dd60"
+        }
+      }
+    }
+  },
+  "Outputs": {
+  },
+ 
+}
